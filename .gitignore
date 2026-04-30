@@ -9,6 +9,14 @@ TSP/POMO/result/*
 !TSP/POMO/result/saved_tsp100_model2_longTrain/checkpoint-3000.pt
 TSP/POMO/result_lib/
 
+# Per-machine run outputs — kept local so 4090 / A100 results can be
+# compared manually without git noise.
+TSP/POMO/logs/
+TSP/POMO/results/
+TSP/POMO/eval_*.json
+TSP/POMO/sweep_results.csv
+TSP/POMO/final_results.csv
+
 NEW_py_ver/TSP/data/tsplib/*
 NEW_py_ver/TSP/POMO/result_lib/*
 NEW_py_ver/TSP/data/*

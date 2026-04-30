@@ -165,7 +165,8 @@ class TSPTrainer:
                     'model_state_dict': self.model.state_dict(),
                     'optimizer_state_dict': self.optimizer.state_dict(),
                     'scheduler_state_dict': self.scheduler.state_dict(),
-                    'result_log': self.result_log.get_raw_data()
+                    'result_log': self.result_log.get_raw_data(),
+                    'bias_cfg': self._snapshot_bias_cfg(),
                 }
                 torch.save(checkpoint_dict, '{}/checkpoint-{}.pt'.format(self.result_folder, epoch))
 
@@ -339,6 +340,7 @@ class TSPTrainer:
                 'optimizer_state_dict': self.optimizer.state_dict(),
                 'scheduler_state_dict': self.scheduler.state_dict(),
                 'result_log': self.result_log.get_raw_data(),
+                'bias_cfg': self._snapshot_bias_cfg(),
             }
 
             latest_path = '{}/checkpoint-latest.pt'.format(self.result_folder)
@@ -364,6 +366,30 @@ class TSPTrainer:
             'epoch_range': (end_epoch - num_epochs + 1, end_epoch),
             'phase_best_score': phase_best_score,
             'phase_best_path': phase_best_path,
+        }
+
+    def _snapshot_bias_cfg(self):
+        """Return a JSON-safe snapshot of the currently-attached distance-bias
+        module's live cfg, or ``None`` if no module is attached / enabled.
+
+        Embedding this into the checkpoint lets the tester (TSPTester_LIB)
+        auto-reattach the bias at evaluation time without requiring the
+        course-grader to pass any extra CLI flag to ``test.py``.
+        """
+        mod = getattr(self.model, 'distance_bias_module', None)
+        if mod is None or not getattr(mod, 'enabled', False):
+            return None
+        # ``mod.cfg`` may contain non-JSON-safe types in principle; cast the
+        # numeric / bool fields explicitly to keep ckpt portable.
+        cfg = mod.cfg
+        return {
+            'distance_bias_enabled': bool(cfg.get('distance_bias_enabled', False)),
+            'distance_bias_scale':   float(cfg.get('distance_bias_scale', 1.0)),
+            'distance_bias_mode':    str(cfg.get('distance_bias_mode', 'logit')),
+            'distance_norm_mode':    str(cfg.get('distance_norm_mode', 'mean')),
+            'knn_bias_enabled':      bool(cfg.get('knn_bias_enabled', False)),
+            'knn_k':                 int(cfg.get('knn_k', 10)),
+            'knn_bias_value':        float(cfg.get('knn_bias_value', 0.5)),
         }
 
     def _train_one_epoch(self, epoch):

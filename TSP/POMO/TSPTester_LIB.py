@@ -109,11 +109,29 @@ class TSPTester_LIB:
         self.logger.info("Number of parameters: %.2fM" % (total / 1e6))
 
         # Optional: attach M2 distance bias module to the model.
-        if self.tester_params.get('distance_bias_enabled', False) or \
-           self.tester_params.get('knn_bias_enabled', False):
-            if DistanceBiasModule is None:
-                raise RuntimeError("DistanceBiasModule unavailable; install model_ext.distance_bias.")
-            bias_cfg = {
+        # Priority order:
+        #   1. CLI override: if user explicitly passed --distance_bias_enabled
+        #      or --knn_bias_enabled, build bias from tester_params.
+        #   2. Ckpt-embedded auto-attach: if the checkpoint was produced by
+        #      finetune_phased.py with a bias module active, ``checkpoint['bias_cfg']``
+        #      records the live cfg (knn_k, scales, etc.). Re-attach it so that the
+        #      ckpt evaluates with the same bias it was trained under -- without
+        #      requiring any extra CLI flag from the course grader.
+        #   3. Else: no bias.
+        cli_bias_on = (
+            self.tester_params.get('distance_bias_enabled', False)
+            or self.tester_params.get('knn_bias_enabled', False)
+        )
+        ckpt_bias_cfg = checkpoint.get('bias_cfg') if isinstance(checkpoint, dict) else None
+        ckpt_bias_on = bool(ckpt_bias_cfg) and (
+            bool(ckpt_bias_cfg.get('distance_bias_enabled'))
+            or bool(ckpt_bias_cfg.get('knn_bias_enabled'))
+        )
+
+        bias_cfg_to_attach = None
+        bias_source = None
+        if cli_bias_on:
+            bias_cfg_to_attach = {
                 'distance_bias_enabled': self.tester_params.get('distance_bias_enabled', False),
                 'distance_bias_scale': float(self.tester_params.get('distance_bias_scale', 1.0)),
                 'distance_bias_mode': self.tester_params.get('distance_bias_mode', 'logit'),
@@ -122,8 +140,18 @@ class TSPTester_LIB:
                 'knn_k': int(self.tester_params.get('knn_k', 10)),
                 'knn_bias_value': float(self.tester_params.get('knn_bias_value', 0.5)),
             }
-            self.model.attach_distance_bias(DistanceBiasModule(bias_cfg))
-            self.logger.info("Attached DistanceBiasModule with cfg: {}".format(bias_cfg))
+            bias_source = 'CLI/tester_params'
+        elif ckpt_bias_on:
+            bias_cfg_to_attach = dict(ckpt_bias_cfg)
+            bias_source = "ckpt['bias_cfg']"
+
+        if bias_cfg_to_attach is not None:
+            if DistanceBiasModule is None:
+                raise RuntimeError("DistanceBiasModule unavailable; install model_ext.distance_bias.")
+            self.model.attach_distance_bias(DistanceBiasModule(bias_cfg_to_attach))
+            self.logger.info("[bias] Attached from %s: %s", bias_source, bias_cfg_to_attach)
+        else:
+            self.logger.info("[bias] No distance/kNN bias attached (ckpt has no bias_cfg, no CLI override).")
 
     def run_lib(self) -> LibResult:
         filename = self.tester_params['filename']
