@@ -6,10 +6,12 @@ venv/
 # Keep the bundled baseline, ignore other generated experiment folders.
 TSP/POMO/result/*
 !TSP/POMO/result/saved_tsp100_model2_longTrain/
+!TSP/POMO/result/best_ckpt_1/
+!TSP/POMO/result/best_ckpt_1/checkpoint-phase_3_leader_best.pt
 !TSP/POMO/result/saved_tsp100_model2_longTrain/checkpoint-3000.pt
 TSP/POMO/result_lib/
 
-# Per-machine run outputs — kept local so 4090 / A100 results can be
+# Per-machine run outputs — kept local so 4090 results can be
 # compared manually without git noise.
 TSP/POMO/logs/
 TSP/POMO/results/

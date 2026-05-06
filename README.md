@@ -8,9 +8,9 @@
 
 | 模块 | 作用层 | 类型 | 位置 |
 |---|---|---|---|
-| **M2 — Distance/kNN Logit Bias** | Forward path（decoder logit）| 归纳偏置（无可学参数）| `TSP/POMO/model_ext/distance_bias.py` |
-| **MSC — Mixed Structured Curriculum** | 数据生成 | 训练分布混合（uniform / clustered / gaussian）| `TSP/TSProblemDef.py`（generators 部分）|
-| **M3 — Leader-Focused Reward** | Loss 函数 | 优化目标（强化 best-of-pomo 信号）| `TSP/POMO/train_ext/leader_reward.py` |
+| **Distance/kNN Logit Bias** | Forward path（decoder logit）| 归纳偏置（无可学参数）| `TSP/POMO/model_ext/distance_bias.py` |
+| **Mixed Structured Curriculu (MSC)** | 数据生成 | 训练分布混合（uniform / clustered / gaussian）| `TSP/TSProblemDef.py`（generators 部分）|
+| **Leader-Focused Reward** | Loss 函数 | 优化目标（强化 best-of-pomo 信号）| `TSP/POMO/train_ext/leader_reward.py` |
 
 ### 1.2 新增训练框架
 
@@ -31,7 +31,7 @@
 | **Checkpoint 自带 `bias_cfg`** | 课程组用标准 `test.py` 命令评测时不传额外 flag，bias 模块需自动从 ckpt 激活 | `TSPTrainer.py`, `TSPTester_LIB.py` |
 | **`--phase_epochs` CLI 覆盖** | 支持只跑 phase 3（从 phase 2 ckpt resume），用于快速 hyperparameter sweep | `finetune_phased.py` |
 | **`control` ablation preset** | 全模块关闭的 fine-tune，作为 ablation 表的 zero-row | `finetune_phased.py` |
-| **`reserve_vram_gb` 默认改为 0** | 避免 24GB 4090 上自占座挤掉同机器并行任务 | `configs/finetune_phased.json` |
+
 
 ### 1.4 新增脚本
 
@@ -39,7 +39,6 @@
 |---|---|
 | [TSP/POMO/scripts/run_sweep.sh](TSP/POMO/scripts/run_sweep.sh) | 多任务 GPU 共享 sweep 启动器 |
 | [TSP/POMO/scripts/validate_phased.sh](TSP/POMO/scripts/validate_phased.sh) | 在 val 集上自动测试一个 result 目录的所有 phase ckpt |
-| [TSP/POMO/scripts/test_on_external.sh](TSP/POMO/scripts/test_on_external.sh) | 在外部 TSPLIB 实例（如 `tsplib-master`）上评测多个 ckpt，按 size 分桶 |
 | [TSP/POMO/scripts/show_sweep_results.py](TSP/POMO/scripts/show_sweep_results.py) | 把多个 run 的结果汇总成 CSV |
 
 ---
