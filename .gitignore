@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+*/.ipynb_checkpoints/
 
 # Keep the bundled baseline, ignore other generated experiment folders.
 TSP/POMO/result/*
