@@ -254,6 +254,15 @@ def build_parser():
     ], default="all_three",
                    help="Quick ablation preset; sets enable_* flags accordingly. "
                         "'control' = all modules off (pure baseline+finetune).")
+
+    # ---- N variation (phase4-like) ----
+    p.add_argument("--n_values", default=None,
+                   help="Comma-separated N values to sample per batch, e.g. "
+                        "'100,150,200,250'. When set, env.problem_size/pomo_size "
+                        "are mutated each batch.")
+    p.add_argument("--n_weights", default=None,
+                   help="Comma-separated weights matching --n_values (default: uniform).")
+
     return p
 
 
@@ -534,6 +543,23 @@ def build_trainer(args):
         'grad_clip_max_norm': float(args.grad_clip_max_norm),
         'msc_cfg': get_default_msc_config(),  # will be overridden per-phase
     }
+
+    # ---- N variation: per-batch random N from --n_values ----
+    if args.n_values:
+        n_vals = [int(x.strip()) for x in args.n_values.split(',') if x.strip()]
+        n_wts = None
+        if args.n_weights:
+            n_wts = [float(x.strip()) for x in args.n_weights.split(',') if x.strip()]
+            if len(n_wts) != len(n_vals):
+                raise ValueError(
+                    f"--n_weights count ({len(n_wts)}) must match --n_values count ({len(n_vals)})"
+                )
+        trainer_params['n_sampler_cfg'] = {
+            'enabled': True,
+            'n_values': n_vals,
+            'weights': n_wts,
+        }
+
     trainer = Trainer(
         env_params=env_params,
         model_params=model_params,

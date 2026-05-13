@@ -123,6 +123,17 @@ class TSPTrainer:
         else:
             self.logger.info('MSC disabled -> using legacy uniform sampler.')
 
+        # Optional per-batch N sampler. When enabled, _train_one_batch mutates
+        # env.problem_size/pomo_size before load_problems.
+        # Shape: {'enabled': bool, 'n_values': [int,...], 'weights': [float,...]?}
+        self.n_sampler_cfg = trainer_params.get('n_sampler_cfg')
+        if self.n_sampler_cfg and self.n_sampler_cfg.get('enabled'):
+            self.logger.info(
+                'n_sampler enabled: n_values=%s weights=%s',
+                self.n_sampler_cfg.get('n_values'),
+                self.n_sampler_cfg.get('weights'),
+            )
+
         # utility
         self.time_estimator = TimeEstimator()
 
@@ -452,6 +463,18 @@ class TSPTrainer:
         # Prep
         ###############################################
         self.model.train()
+
+        # Variable-N synthetic batch (when n_sampler is enabled) or fixed N.
+        # The env's problem_size/pomo_size attributes are mutated *before*
+        # load_problems so the regenerated BATCH_IDX/POMO_IDX/ninf_mask pick
+        # up the new N.
+        if self.n_sampler_cfg and self.n_sampler_cfg.get('enabled'):
+            import random as _rand
+            n_values = self.n_sampler_cfg['n_values']
+            n_weights = self.n_sampler_cfg.get('weights')
+            n = _rand.choices(n_values, weights=n_weights, k=1)[0]
+            self.env.problem_size = int(n)
+            self.env.pomo_size = int(n)
         self.env.load_problems(
             batch_size,
             epoch=epoch,
